@@ -1,5 +1,7 @@
-import React, { memo, useState } from "react";
+import React, { memo, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import useDebounce from "../hooks/useHook";
+import { useSessionStorage } from "../hooks/useSessionStorage";
 import { IBook } from "../models/IBook";
 
 import * as BookAPI from "../services/BooksAPI";
@@ -9,6 +11,28 @@ const Search = () => {
   const [inputSearch, setInputSearch] = useState<string>("");
   const [listSearch, setListSearch] = useState<any[]>([]);
   const navigate = useNavigate();
+  const [storageBook] = useSessionStorage("books");
+  const debounceInputSearch = useDebounce<string>(inputSearch, 500);
+
+  useEffect(() => {
+    if (debounceInputSearch) {
+      BookAPI.search(debounceInputSearch)
+        .then((book: IBook[]) =>
+          setListSearch(
+            book.map((item: IBook) => {
+              const shelfName = (storageBook as IBook[]).find(
+                (sb: IBook) => sb.id === item.id
+              )?.shelf;
+              return {
+                ...item,
+                shelf: shelfName ? shelfName : "none",
+              };
+            })
+          )
+        )
+        .catch((error: Error) => console.log(error));
+    }
+  }, [debounceInputSearch]);
 
   const handleCloseSearch = (): void => {
     navigate("/");
@@ -18,9 +42,6 @@ const Search = () => {
     target: { value },
   }: React.ChangeEvent<HTMLInputElement>): void => {
     setInputSearch(value);
-    BookAPI.search(value)
-      .then((res: IBook[]) => setListSearch(res))
-      .catch((error: Error) => console.log(error));
   };
 
   const handleSelectShelf = (book: IBook, option: string) => {
@@ -46,7 +67,14 @@ const Search = () => {
       </div>
       <div className="search-books-results">
         <ol className="books-grid">
-          <BookItem books={listSearch} handleSelectShelf={handleSelectShelf} />
+          {(listSearch as any)?.error ? (
+            "No results found"
+          ) : (
+            <BookItem
+              books={listSearch}
+              handleSelectShelf={handleSelectShelf}
+            />
+          )}
         </ol>
       </div>
     </div>

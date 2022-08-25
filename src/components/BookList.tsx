@@ -3,6 +3,7 @@ import * as BookAPI from "../services/BooksAPI";
 import { IBook } from "../models/IBook";
 import BookItem from "./BookItem";
 import { useNavigate } from "react-router-dom";
+import { useSessionStorage } from "../hooks/useSessionStorage";
 
 const LABEL_NAME: Array<{ key: string; label: string }> = [
   {
@@ -32,6 +33,7 @@ const BookList = (): JSX.Element => {
     wantToRead: [],
   });
   const navigate = useNavigate();
+  const [, setStorageBook] = useSessionStorage("books");
 
   useEffect(() => {
     getAllBooks();
@@ -51,6 +53,7 @@ const BookList = (): JSX.Element => {
             wantToRead,
           };
         });
+        setStorageBook(res);
       })
       .catch((err: Error) => console.error(err));
   };
